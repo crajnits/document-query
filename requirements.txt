@@ -1,0 +1,10 @@
+numpy==1.26.4
+torch >= 1.0
+pdf2image
+pdfplumber
+Pillow
+pydantic
+pytesseract
+requests
+easyocr
+transformers == 4.23
