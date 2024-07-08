@@ -1,13 +1,13 @@
 import abc
 import mimetypes
 import os
-from io import BytesIO
+import io
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from PIL import Image, UnidentifiedImageError
+import PIL
 import pydantic
 
-from ocr_reader import NoOCRReaderFound, OCRReader, get_ocr_reader
+import ocr_reader as ocr
 
 try:
     from functools import cached_property as cached_property
@@ -59,16 +59,16 @@ class Document(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def preview(self) -> "Image":
+    def preview(self) -> "PIL.Image":
         raise NotImplementedError
 
     @staticmethod
     def _generate_document_output(
-        images: List["Image.Image"],
+        images: List["PIL.Image.Image"],
         words_by_page: List[List[str]],
         boxes_by_page: List[List[List[int]]],
         dimensions_by_page: List[Tuple[int, int]],
-    ) -> Dict[str, List[Tuple["Image.Image", List[Any]]]]:
+    ) -> Dict[str, List[Tuple["PIL.Image.Image", List[Any]]]]:
 
         # pages_dimensions (width, height)
         assert len(images) == len(dimensions_by_page)
@@ -111,7 +111,7 @@ class PDFDocument(Document):
         super().__init__(**kwargs)
 
     @cached_property
-    def context(self) -> Dict[str, List[Tuple["Image.Image", List[Any]]]]:
+    def context(self) -> Dict[str, List[Tuple["PIL.Image.Image", List[Any]]]]:
         pdf = self._pdf
         if pdf is None:
             return {}
@@ -146,7 +146,7 @@ class PDFDocument(Document):
         return self._generate_document_output(images, words_by_page, boxes_by_page, dimensions_by_page)
 
     @cached_property
-    def preview(self) -> "Image":
+    def preview(self) -> "PIL.Image":
         return self._images
 
     @cached_property
@@ -156,7 +156,7 @@ class PDFDocument(Document):
     @cached_property
     def _pdf(self):
         use_pdf_plumber()
-        pdf = pdfplumber.open(BytesIO(self.b))
+        pdf = pdfplumber.open(io.BytesIO(self.b))
         if len(pdf.pages) == 0:
             return None
         return pdf
@@ -170,31 +170,31 @@ class ImageDocument(Document):
         super().__init__(**kwargs)
 
     @cached_property
-    def preview(self) -> "Image":
+    def preview(self) -> "PIL.Image":
         return [self.b.convert("RGB")]
 
     @cached_property
-    def context(self) -> Dict[str, List[Tuple["Image.Image", List[Any]]]]:
+    def context(self) -> Dict[str, List[Tuple["PIL.Image.Image", List[Any]]]]:
         words, boxes = self.ocr_reader.apply_ocr(self.b)
         return self._generate_document_output([self.b], [words], [boxes], [(self.b.width, self.b.height)])
 
 
 @pydantic.validate_call
-def load_document(fpath: str, ocr_reader: Optional[Union[str, OCRReader]] = None, use_embedded_text=True):
+def load_document(fpath: str, ocr_reader: Optional[Union[str, ocr.OCRReader]] = None, use_embedded_text=True):
     base_path = os.path.basename(fpath).split("?")[0].strip()
     doc_type = mimetypes.guess_type(base_path)[0]
     b = open(fpath, "rb")
 
     if not ocr_reader or isinstance(ocr_reader, str):
-        ocr_reader = get_ocr_reader(ocr_reader)
-    elif not isinstance(ocr_reader, OCRReader):
-        raise NoOCRReaderFound(f"{ocr_reader} is not a supported OCRReader class")
+        ocr_reader = ocr.get_ocr_reader(ocr_reader)
+    elif not isinstance(ocr_reader, ocr.OCRReader):
+        raise ocr.NoOCRReaderFound(f"{ocr_reader} is not a supported OCRReader class")
 
     if doc_type == "application/pdf":
         return PDFDocument(b.read(), ocr_reader=ocr_reader, use_embedded_text=use_embedded_text)
     else:
         try:
-            img = Image.open(b)
-        except UnidentifiedImageError as e:
+            img = PIL.Image.open(b)
+        except PIL.UnidentifiedImageError as e:
             raise UnsupportedDocument(e)
         return ImageDocument(img, ocr_reader=ocr_reader)

@@ -2,6 +2,7 @@ import abc
 import logging
 from typing import Any, List, Optional, Tuple
 import numpy as np
+import PIL
 
 class NoOCRReaderFound(Exception):
     def __init__(self, e):
@@ -62,7 +63,7 @@ class OCRReader(metaclass=SingletonMeta):
         return v
 
     @abc.abstractmethod
-    def apply_ocr(self, image: "Image.Image") -> Tuple[List[Any], List[List[int]]]:
+    def apply_ocr(self, image: "PIL.Image.Image") -> Tuple[List[Any], List[List[int]]]:
         raise NotImplementedError
 
     @staticmethod
@@ -75,7 +76,7 @@ class TesseractReader(OCRReader):
     def __init__(self):
         super().__init__()
 
-    def apply_ocr(self, image: "Image.Image") -> Tuple[List[str], List[List[int]]]:
+    def apply_ocr(self, image: "PIL.Image.Image") -> Tuple[List[str], List[List[int]]]:
         """
         Applies Tesseract on a document image, and returns recognized words + normalized bounding boxes.
         This was derived from LayoutLM preprocessing code in Huggingface's Transformers library.
@@ -109,7 +110,7 @@ class EasyOCRReader(OCRReader):
         super().__init__()
         self.reader = None
 
-    def apply_ocr(self, image: "Image.Image") -> Tuple[List[str], List[List[int]]]:
+    def apply_ocr(self, image: "PIL.Image.Image") -> Tuple[List[str], List[List[int]]]:
         """Applies Easy OCR on a document image, and returns recognized words + normalized bounding boxes."""
         if not self.reader:
             # TODO: expose language currently setting to english
@@ -142,7 +143,7 @@ class DummyOCRReader(OCRReader):
         super().__init__()
         self.reader = None
 
-    def apply_ocr(self, image: "Image.Image") -> Tuple[(List[str], List[List[int]])]:
+    def apply_ocr(self, image: "PIL.Image.Image") -> Tuple[(List[str], List[List[int]])]:
         raise NoOCRReaderFound("Unable to find any OCR reader and OCR extraction was requested")
 
     @staticmethod

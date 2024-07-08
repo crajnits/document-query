@@ -8,8 +8,8 @@ from transformers.models.auto.auto_factory import _BaseAutoModelClass, _LazyAuto
 from transformers.models.auto.configuration_auto import CONFIG_MAPPING_NAMES
 from transformers.pipelines import PIPELINE_REGISTRY
 
-from model import LayoutLMForQuestionAnswering
-from document_queries_pipeline import DocumentQueriesPipeline
+import model as lm_model
+import document_queries_pipeline
 
 
 PIPELINE_DEFAULTS = {
@@ -36,7 +36,7 @@ class AutoModelForDocumentQuestionAnswering(_BaseAutoModelClass):
 
 PIPELINE_REGISTRY.register_pipeline(
     "document-queries",
-    pipeline_class=DocumentQueriesPipeline,
+    pipeline_class=document_queries_pipeline.DocumentQueriesPipeline,
     pt_model=AutoModelForDocumentQuestionAnswering,
 )
 
@@ -66,7 +66,7 @@ def pipeline(
         )
 
     if any(a == "LayoutLMForQuestionAnswering" for a in config.architectures):
-        model = LayoutLMForQuestionAnswering.from_pretrained(
+        model = lm_model.LayoutLMForQuestionAnswering.from_pretrained(
             model, config=config, revision=revision, **{**pipeline_kwargs}
         )
 
